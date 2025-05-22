@@ -10,7 +10,7 @@ const font = Montserrat ({
 export const metadata = {
     title: "Orders 🛒",
     icons: {
-    icon: "/icons/favicon.ico",
+    icon: "/icon/favicon.ico",
   },
     description: "Projeto de Frontend interligado a Backend e Banco de dados",
 

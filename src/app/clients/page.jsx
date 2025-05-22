@@ -2,18 +2,16 @@
 
 import { use, useEffect, useState } from "react";
 import axios from "axios";
-import { Pagination, Modal, Card} from "antd";
+import { Pagination, Modal, Card, Skeleton} from "antd";
 import Image from "next/image";
 import { ToastContainer, toast } from "react-toastify";
 import styles from "./Client.module.css";
+import Footer from "@/components/footer";
 import "@ant-design/v5-patch-for-react-19";
 
 const headers = { "x-api-key": process.env.NEXT_PUBLIC_API_KEY};
 
 export default function Clients() {
-    const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
 
     const [data, setData] = useState({
         clients: [],
@@ -32,24 +30,12 @@ export default function Clients() {
     useEffect(() => {
         const fetchClients = async () => {
             const cacheKey = "clientsData";
-            const cachedData = localStorage("clientsData", []);
-
-            if (cachedData.length > 0) {
-                setData({
-                    clients: cachedData,
-                    loading: false,
-                    current: 1,
-                    pageSize: 10,
-                });
-                return;
-            } try {
-                const { data: clients } = await axios.get(
+            try {
+                const response = await axios.get(
                     `${process.env.NEXT_PUBLIC_API_URL}/clients`,
                     { headers : headers }
                 );
-                setData({ clients, loading: false, current: 1, pageSize: 10 });
-                localStorage.setItem(cacheKey, JSON.stringify(clients));
-                // localStorage("clientsData", clients);
+                setData({ clients: response.data, loading: false, current: 1, pageSize: 10 });
             } catch (error) {
                 toast.error("Error loading clients");
                 console.error("Error loading clients", error);
@@ -61,20 +47,14 @@ export default function Clients() {
     }, []);
 
     const openModal = async (client) => {
-        setModalInfo({ visible: true, client, order: null, loading: true });
+        setModalInfo({ visible: true, name: client.name, client, loading: false });
 
-        const cacheKey = `order_${client.id}`;
-        const cachedData = localStorage.getItem(cacheKey, null);
-        if (cachedData) {
-            setModalInfo((m) => ({...m, order: JSON.parse(cachedData), loading: false }));
-            return;
-        } try {
+        try {
             const { data: order } = await axios.get(
                 `${process.env.NEXT_PUBLIC_API_URL}/orders/${client.id}`,
                 { headers : headers }
             );
             setModalInfo((m) => ({...m, order, loading: false }));
-            localStorage.setItem(cacheKey, JSON.stringify(order));
         } catch (error) {
             toast.error("Error loading order");
             console.error("Error loading order", error);
@@ -87,21 +67,7 @@ export default function Clients() {
         return data.clients.slice(start, start + data.pageSize);
     };
 
-    useEffect(() => {
-        fetchClients(search, page);
-    }, [page]);
-
-    const handleSearch = () => {
-        setPage(1);
-        fetchClients(search, 1);
-    }
-
-    const handleResetClick = () => {
-            setSearch("");
-            setPage(1);
-            fetchClients("", 1);
-            toast.success("Filtro foi resetado", { position: "top-right" });
-        };
+    
 
     return (
         <div className={styles.container}>
@@ -112,29 +78,6 @@ export default function Clients() {
             />
 
             <h1 className={styles.title}>Clients</h1>
-
-            <div className={styles.search}>
-                <input
-                    type="text"
-                    placeholder="Search by name"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className={styles.input}
-                />
-                <button
-                    onClick={handleSearch}
-                    className={styles.button}
-                >
-                    Search
-                </button>
-
-                <button
-                    onClick={handleResetClick}
-                    className={styles.buttonReset}
-                >
-                    Reset
-                </button>
-            </div>
 
             <Pagination
                 current={data.current}
@@ -148,7 +91,7 @@ export default function Clients() {
             />
 
             {data.loading ? (
-                <Image src="/images/shoppingLoading.gif" alt="Loading" width={100} height={100} />
+                <Image src="/image/shoppingLoading.gif" unoptimized className={styles.loading} alt="Loading" width={100} height={100} />
             ) : (
                 <div className={styles.clientList}>
                     {paginatedClients().map((client) => (
@@ -161,15 +104,58 @@ export default function Clients() {
                                 <Image
                                     alt={client.name}
                                     src={client.profile ? client.profile : "/image/200.svg"}
+                                    width={200}
+                                    height={200}
+                                    className={styles.clientImage}
                                 />
                             }
                         >
-                            <h2 className={styles.clientName}>{client.name}</h2>
-                            <p className={styles.clientEmail}>{client.email}</p>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
+                            <Card.Meta
+                            title={client.name}
+                            />
+                            </Card>
+                    ))}
                 </div>
-            );
-        }
+            )}
+            <Modal
+            title={`Pedido de ${modalInfo.client?.name}`}
+            open={modalInfo.visible}
+            onCancel={() => setModalInfo({
+                visible: false,
+                client: null,
+                order: null,
+                loading: false,
+            })}
+            onOk={() =>
+                setModalInfo({
+                    visible: false,
+                    client: null,
+                    order: null,
+                    loading: false,
+                })
+            }
+            width={600}
+            >
+                {modalInfo.loading ? (
+                    <Skeleton active />
+                ) : modalInfo.order ? (
+                    <div className={styles.modalContent}>
+                        <p>
+                            <span className={styles.label}>Produto: </span>{""}
+                            {modalInfo.order.product}
+                        </p>
+                        <p>
+                            <span className={styles.label}>Preço: </span>{""}
+                            {modalInfo.order.price}
+                        </p>
+                        </div>
+                ) : (
+                    <p className={styles.noOrder}>
+                        Este cliente não possui pedidos.
+                    </p>
+                )}
+            </Modal>
+            <Footer />
+        </div>
+    );
+}
