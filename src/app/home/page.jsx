@@ -1,8 +1,10 @@
 import styles from "./Home.module.css";
 import Image from "next/image";
+import Link from 'next/link';
 import React from "react";
 import Footer from "@/components/footer";
 import { Button, Flex } from 'antd';
+import '@ant-design/v5-patch-for-react-19';
 
 export default function Home() {
     return (
@@ -27,7 +29,9 @@ export default function Home() {
                 </p>
             </div>
 
-            <Button>Default Button</Button>
+            <Link href="/clients" prefetch>
+                <Button>Ver Clientes</Button>
+            </Link>
 
             <Footer />
             
